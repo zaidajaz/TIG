@@ -57,16 +57,25 @@ class Converter {
           address = "Hazratbal , Srinagar.";
           invDate = custData.date;
           invDate = invDate.replace(/-/g,"");
-          //invDate = "20" + invDate[2] + invDate[1] + invDate[0];
           gstRate = custData.gstPercent;
           partyName = (custData.name.encodeHTML());
           gstAmount = parseFloat(custData.cgst) + parseFloat(custData.sgst);
           stockItemName = custData.item;
           stockItemRate = parseFloat(custData.amount).toFixed(2);
-          //amount = parseFloat(custData.listPrice).toFixed(2);
           amount = parseFloat(stockItemRate) + gstAmount;
           quantity = custData.qty;
           alterID = parseInt(Math.random()*100000);
+
+          let amountDecimal = parseFloat(amount - parseInt(amount)).toFixed(2);
+          if(amountDecimal == 0.99) {
+            stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
+            gstAmount = parseFloat(gstAmount) + 0.02;
+            amount = parseFloat(stockItemRate) + gstAmount;
+          }
+          if(amountDecimal == 0.01) {
+            stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
+            amount = parseFloat(stockItemRate) + gstAmount;
+          }
 
           var voucherDetails = `
            <VOUCHER REMOTEID="${guid}" VCHTYPE="Sales" ACTION="Create">
@@ -122,7 +131,7 @@ class Converter {
              <LEDGERFROMITEM>No</LEDGERFROMITEM>
              <REMOVEZEROENTRIES>No</REMOVEZEROENTRIES>
              <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
-             <AMOUNT>-${amount}</AMOUNT>
+             <AMOUNT>-${amount.toFixed(2)}</AMOUNT>
             </LEDGERENTRIES.LIST>
             <LEDGERENTRIES.LIST>
              <BASICRATEOFINVOICETAX.LIST>

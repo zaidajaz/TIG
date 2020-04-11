@@ -1,0 +1,8 @@
+csvGen.bat
+Hot To Use.txt
+invoiceXMLGen.bat
+input
+data-converter/node_modules
+data-generator/node_modules
+invoices.xml
+invoicelist.csv
