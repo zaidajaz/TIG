@@ -1,0 +1,11 @@
+1. Place the following files in the input folder with data in specified format:
+	- DailyAmountList.csv (date,amount)
+	- NameList.csv (Name,)
+	- RatList.csv (Item,Price,GST)
+	- stockList.csv (Item,Qty)
+NOTE: The date in the DailyAmountList.csv should be in following format - YYYY-MM-DD
+
+2. Run csvGen file. It will create a file invoicelist.csv. This file can be modified (if needed). Please make sure that if the file is modified, the date should be formatted as YYYY-MM-DD.
+
+3. Run invoiceXMLGen file. This will use invoicelist.csv to generate XML file named invoices in the "C:/tally9 orginal" folder that can be imported in Tally.
+NOTE: To specify the company name for which invoices should be generated, you can edit invoiceXMLGen file and specifiy the company name.

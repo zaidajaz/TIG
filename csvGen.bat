@@ -1,0 +1,1 @@
+node bin/data-generator/index.js
