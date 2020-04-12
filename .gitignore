@@ -6,3 +6,7 @@ data-converter/node_modules
 data-generator/node_modules
 invoices.xml
 invoicelist.csv
+.DS_Store
+.gitignore
+bin/data-generator/.DS_Store
+bin/data-generator/invoiceGen/.DS_Store
