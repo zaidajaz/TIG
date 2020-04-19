@@ -10,3 +10,5 @@ invoicelist.csv
 .gitignore
 bin/data-generator/.DS_Store
 bin/data-generator/invoiceGen/.DS_Store
+invoicelist.csv
+.vscode/launch.json

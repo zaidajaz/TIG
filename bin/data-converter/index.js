@@ -17,9 +17,44 @@ class Converter {
             callback(inputFileData);
         });
     }
+    createVouchers(inputData, callback) {
+      let lastVoucherId = inputData[0].date + inputData[0].name;
+      let voucherList = [];
+
+      let voucher = [];
+
+      inputData.forEach(function(row) {
+        const currentVoucherID = row.date + row.name;
+        
+        let currentVoucher = {
+          date: row.date,
+          name: row.name,
+          item: row.item,
+          qty: row.qty,
+          gstPercent: row.gstPercent,
+          amount: row.amount,
+          cgst: row.cgst,
+          sgst: row.sgst,
+          listPrice: row.listPrice
+        }
+
+        if(lastVoucherId != currentVoucherID) {
+          voucherList.push(voucher);
+          voucher = [];
+        } 
+
+        voucher.push(currentVoucher);
+
+        lastVoucherId = currentVoucherID;
+
+      });
+      voucherList.push(voucher);
+      callback(voucherList);
+    }
 
     writeOutputFile(inputData, companyName) {
-        var guid, address, invDate, gstRate, partyName, gstRate, gstAmount, stockItemName, 
+        var guid, address, invDate, className, totalAmount,
+        ledgerName, gstRate, partyName, gstRate, gstAmount, stockItemName, 
         stockItemRate, amount, quantity, alterID;
 
         
@@ -52,39 +87,85 @@ class Converter {
           };
         }
 
+        var getClassNameForInvoice = (invoice, getLedgerName) => {
+          let gstPercent = -1;
+          let sameClass = true;
+          invoice.forEach(item => {
+            if(gstPercent == -1) {
+              gstPercent = item.gstPercent;
+              return;
+            }
+            if(gstPercent != item.gstPercent)
+              sameClass = false;
+          });
+          if(sameClass) {
+            return getLedgerName? `SALES ACCOUNT @${gstPercent}%` : `GST INVOICE @ ${gstPercent}%`;
+          } else {
+            return getLedgerName? 'SALE' : "GST INVOICE VALID FOR INPUT TAX CREDIT.";
+          }
+        }
+
+        var getVoucherAmount = (invoice) => {
+          let totalAmt = 0;
+          invoice.forEach(item => {
+            gstAmount = parseFloat(item.cgst) + parseFloat(item.sgst);
+            stockItemRate = parseFloat(item.amount).toFixed(2);
+            amount = parseFloat(stockItemRate) + gstAmount;
+
+            let amountDecimal = parseFloat(amount - parseInt(amount)).toFixed(2);
+            if(amountDecimal == 0.99) {
+              stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
+              gstAmount = parseFloat(gstAmount) + 0.02;
+              amount = parseFloat(stockItemRate) + gstAmount;
+            }
+            if(amountDecimal == 0.01) {
+              stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
+              amount = parseFloat(stockItemRate) + gstAmount;
+            }
+
+            totalAmt += amount;
+          });
+          return totalAmt;
+        }
+
         inputData.forEach((custData)=> {
+
           guid = uuidv4();
           address = "Hazratbal , Srinagar.";
-          invDate = custData.date;
+          invDate = custData[0].date;
           invDate = invDate.replace(/-/g,"");
-          gstRate = custData.gstPercent;
-          partyName = (custData.name.encodeHTML());
-          gstAmount = parseFloat(custData.cgst) + parseFloat(custData.sgst);
-          stockItemName = custData.item;
-          stockItemRate = parseFloat(custData.amount).toFixed(2);
-          amount = parseFloat(stockItemRate) + gstAmount;
-          quantity = custData.qty;
+          partyName = (custData[0].name.encodeHTML());
           alterID = parseInt(Math.random()*100000);
+          className = getClassNameForInvoice(custData);
+          ledgerName = getClassNameForInvoice(custData, true);
+          totalAmount = getVoucherAmount(custData);
 
-          let amountDecimal = parseFloat(amount - parseInt(amount)).toFixed(2);
-          if(amountDecimal == 0.99) {
-            stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
-            gstAmount = parseFloat(gstAmount) + 0.02;
-            amount = parseFloat(stockItemRate) + gstAmount;
-          }
-          if(amountDecimal == 0.01) {
-            stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
-            amount = parseFloat(stockItemRate) + gstAmount;
-          }
+          // gstRate = custData.gstPercent;
+          // gstAmount = parseFloat(custData.cgst) + parseFloat(custData.sgst);
+          // stockItemName = custData.item;
+          // stockItemRate = parseFloat(custData.amount).toFixed(2);
+          // amount = parseFloat(stockItemRate) + gstAmount;
+          // quantity = custData.qty;
 
-          var voucherDetails = `
+          // let amountDecimal = parseFloat(amount - parseInt(amount)).toFixed(2);
+          // if(amountDecimal == 0.99) {
+          //   stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
+          //   gstAmount = parseFloat(gstAmount) + 0.02;
+          //   amount = parseFloat(stockItemRate) + gstAmount;
+          // }
+          // if(amountDecimal == 0.01) {
+          //   stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
+          //   amount = parseFloat(stockItemRate) + gstAmount;
+          // }
+
+          var voucherDetails1 = `
            <VOUCHER REMOTEID="${guid}" VCHTYPE="Sales" ACTION="Create">
             <ADDRESS.LIST>
               <ADDRESS>${address}</ADDRESS>
             </ADDRESS.LIST>
             <DATE>${invDate}</DATE>
             <GUID>${guid}</GUID>
-            <CLASSNAME>GST INVOICE @ ${gstRate}%</CLASSNAME>
+            <CLASSNAME>${className}</CLASSNAME>
             <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
             <VOUCHERNUMBER>IV</VOUCHERNUMBER>
             <PARTYLEDGERNAME>${partyName}</PARTYLEDGERNAME>
@@ -119,11 +200,6 @@ class Converter {
             <ASORIGINAL>No</ASORIGINAL>
             <INVOICEINDENTLIST.LIST>
             </INVOICEINDENTLIST.LIST>
-            <UDF:HARYANAVAT.LIST DESC="\`HARYANAVAT\`">
-             <UDF:HARVCHSUBCLASS.LIST DESC="\`HARVCHSUBCLASS\`" ISLIST="YES">
-               <UDF:HARVCHSUBCLASS DESC="\`HARVCHSUBCLASS\`">Others</UDF:HARVCHSUBCLASS>
-             </UDF:HARVCHSUBCLASS.LIST>
-            </UDF:HARYANAVAT.LIST>
             <LEDGERENTRIES.LIST>
              <LEDGERNAME>${partyName}</LEDGERNAME>
              <GSTCLASS/>
@@ -131,72 +207,100 @@ class Converter {
              <LEDGERFROMITEM>No</LEDGERFROMITEM>
              <REMOVEZEROENTRIES>No</REMOVEZEROENTRIES>
              <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
-             <AMOUNT>-${amount.toFixed(2)}</AMOUNT>
+             <AMOUNT>-${totalAmount.toFixed(2)}</AMOUNT>
             </LEDGERENTRIES.LIST>
-            <LEDGERENTRIES.LIST>
-             <BASICRATEOFINVOICETAX.LIST>
-               <BASICRATEOFINVOICETAX> ${gstRate/2}</BASICRATEOFINVOICETAX>
-             </BASICRATEOFINVOICETAX.LIST>
-             <ROUNDTYPE/>
-             <LEDGERNAME>SGST</LEDGERNAME>
-             <METHODTYPE>On Total Sales</METHODTYPE>
-             <CLASSRATE>${gstRate/2}</CLASSRATE>
-             <GSTCLASS/>
-             <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-             <LEDGERFROMITEM>No</LEDGERFROMITEM>
-             <REMOVEZEROENTRIES>Yes</REMOVEZEROENTRIES>
-             <ISPARTYLEDGER>No</ISPARTYLEDGER>
-             <AMOUNT>${(gstAmount/2).toFixed(2)}</AMOUNT>
-            </LEDGERENTRIES.LIST>
-            <LEDGERENTRIES.LIST>
-             <BASICRATEOFINVOICETAX.LIST>
-               <BASICRATEOFINVOICETAX> 6</BASICRATEOFINVOICETAX>
-             </BASICRATEOFINVOICETAX.LIST>
-             <ROUNDTYPE/>
-             <LEDGERNAME>CGST</LEDGERNAME>
-             <METHODTYPE>On Total Sales</METHODTYPE>
-             <CLASSRATE>6</CLASSRATE>
-             <GSTCLASS/>
-             <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-             <LEDGERFROMITEM>No</LEDGERFROMITEM>
-             <REMOVEZEROENTRIES>Yes</REMOVEZEROENTRIES>
-             <ISPARTYLEDGER>No</ISPARTYLEDGER>
-             <AMOUNT>${(gstAmount/2).toFixed(2)}</AMOUNT>
-            </LEDGERENTRIES.LIST>
-            <ALLINVENTORYENTRIES.LIST>
-             <STOCKITEMNAME>${stockItemName}</STOCKITEMNAME>
-             <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-             <ISAUTONEGATE>No</ISAUTONEGATE>
-             <RATE>${stockItemRate}/pcs</RATE>
-             <AMOUNT>${stockItemRate}</AMOUNT>
-             <ACTUALQTY> ${quantity} pcs</ACTUALQTY>
-             <BILLEDQTY> ${quantity} pcs</BILLEDQTY>
-             <ACCOUNTINGALLOCATIONS.LIST>
-              <LEDGERNAME>SALES ACCOUNT @12%</LEDGERNAME>
-              <CLASSRATE>1.00000</CLASSRATE>
-              <GSTCLASS/>
-              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-              <LEDGERFROMITEM>No</LEDGERFROMITEM>
-              <REMOVEZEROENTRIES>No</REMOVEZEROENTRIES>
-              <ISPARTYLEDGER>No</ISPARTYLEDGER>
-              <AMOUNT>${stockItemRate}</AMOUNT>
-             </ACCOUNTINGALLOCATIONS.LIST>
-             <BATCHALLOCATIONS.LIST>
-              <MFDON>20190703</MFDON>
-              <GODOWNNAME>Main Location</GODOWNNAME>
-              <BATCHNAME>Primary Batch</BATCHNAME>
-              <DESTINATIONGODOWNNAME>Main Location</DESTINATIONGODOWNNAME>
-              <INDENTNO/>
-              <ORDERNO/>
-              <TRACKINGNUMBER/>
-              <AMOUNT>${stockItemRate}</AMOUNT>
-              <ACTUALQTY> ${quantity} pcs</ACTUALQTY>
-              <BILLEDQTY> ${quantity} pcs</BILLEDQTY>
-             </BATCHALLOCATIONS.LIST>
-            </ALLINVENTORYENTRIES.LIST>
+            `;
+
+            var voucherDetails2 = "";
+
+            custData.forEach(entry=>{
+
+            gstRate = entry.gstPercent;
+            gstAmount = parseFloat(entry.cgst) + parseFloat(entry.sgst);
+            stockItemName = entry.item;
+            stockItemRate = parseFloat(entry.amount).toFixed(2);
+            quantity = entry.qty;
+            amount = parseFloat(stockItemRate) + gstAmount;
+
+            let amountDecimal = parseFloat(amount - parseInt(amount)).toFixed(2);
+            if(amountDecimal == 0.99) {
+              stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
+              gstAmount = parseFloat(gstAmount) + 0.02;
+              amount = parseFloat(stockItemRate) + gstAmount;
+            }
+            if(amountDecimal == 0.01) {
+              stockItemRate = parseFloat(stockItemRate - 0.01).toFixed(2);
+              amount = parseFloat(stockItemRate) + gstAmount;
+            }
+
+              voucherDetails2 += `
+              <LEDGERENTRIES.LIST>
+               <BASICRATEOFINVOICETAX.LIST>
+                 <BASICRATEOFINVOICETAX> ${gstRate/2}</BASICRATEOFINVOICETAX>
+               </BASICRATEOFINVOICETAX.LIST>
+               <ROUNDTYPE/>
+               <LEDGERNAME>SGST</LEDGERNAME>
+               <METHODTYPE>On Total Sales</METHODTYPE>
+               <CLASSRATE>${gstRate/2}</CLASSRATE>
+               <GSTCLASS/>
+               <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+               <LEDGERFROMITEM>No</LEDGERFROMITEM>
+               <REMOVEZEROENTRIES>Yes</REMOVEZEROENTRIES>
+               <ISPARTYLEDGER>No</ISPARTYLEDGER>
+               <AMOUNT>${(gstAmount/2).toFixed(2)}</AMOUNT>
+              </LEDGERENTRIES.LIST>
+              <LEDGERENTRIES.LIST>
+               <BASICRATEOFINVOICETAX.LIST>
+                 <BASICRATEOFINVOICETAX> ${gstRate/2}</BASICRATEOFINVOICETAX>
+               </BASICRATEOFINVOICETAX.LIST>
+               <ROUNDTYPE/>
+               <LEDGERNAME>CGST</LEDGERNAME>
+               <METHODTYPE>On Total Sales</METHODTYPE>
+               <CLASSRATE>${gstRate/2}</CLASSRATE>
+               <GSTCLASS/>
+               <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+               <LEDGERFROMITEM>No</LEDGERFROMITEM>
+               <REMOVEZEROENTRIES>Yes</REMOVEZEROENTRIES>
+               <ISPARTYLEDGER>No</ISPARTYLEDGER>
+               <AMOUNT>${(gstAmount/2).toFixed(2)}</AMOUNT>
+              </LEDGERENTRIES.LIST>
+              <ALLINVENTORYENTRIES.LIST>
+               <STOCKITEMNAME>${stockItemName}</STOCKITEMNAME>
+               <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+               <ISAUTONEGATE>No</ISAUTONEGATE>
+               <RATE>${stockItemRate}/pcs</RATE>
+               <AMOUNT>${stockItemRate}</AMOUNT>
+               <ACTUALQTY> ${quantity} pcs</ACTUALQTY>
+               <BILLEDQTY> ${quantity} pcs</BILLEDQTY>
+               <ACCOUNTINGALLOCATIONS.LIST>
+                <LEDGERNAME>${ledgerName}</LEDGERNAME>
+                <CLASSRATE>1.00000</CLASSRATE>
+                <GSTCLASS/>
+                <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+                <LEDGERFROMITEM>No</LEDGERFROMITEM>
+                <REMOVEZEROENTRIES>No</REMOVEZEROENTRIES>
+                <ISPARTYLEDGER>No</ISPARTYLEDGER>
+                <AMOUNT>${stockItemRate}</AMOUNT>
+               </ACCOUNTINGALLOCATIONS.LIST>
+               <BATCHALLOCATIONS.LIST>
+                <MFDON>20190703</MFDON>
+                <GODOWNNAME>Main Location</GODOWNNAME>
+                <BATCHNAME>Primary Batch</BATCHNAME>
+                <DESTINATIONGODOWNNAME>Main Location</DESTINATIONGODOWNNAME>
+                <INDENTNO/>
+                <ORDERNO/>
+                <TRACKINGNUMBER/>
+                <AMOUNT>${stockItemRate}</AMOUNT>
+                <ACTUALQTY> ${quantity} pcs</ACTUALQTY>
+                <BILLEDQTY> ${quantity} pcs</BILLEDQTY>
+               </BATCHALLOCATIONS.LIST>
+              </ALLINVENTORYENTRIES.LIST>`;
+            });
+           voucherDetails2 += `
            </VOUCHER>
            `;
-
+          
+           let voucherDetails = voucherDetails1 + voucherDetails2;
            output2 += voucherDetails;
         });
         
@@ -208,7 +312,7 @@ class Converter {
         </ENVELOPE>        
         `;
 
-        fs.writeFile("C:/tally9 original/invoices.xml", output1+output2+output3, function(){
+        fs.writeFile("invoices.xml", output1+output2+output3, function(){
           console.log("Output File invoices.xml has been written");
         });
     }
@@ -219,7 +323,9 @@ converter.readInputFile(function(inputData){
     let companyName = '';
     if(process.argv[2]) {
       companyName = process.argv[2];
-      converter.writeOutputFile(inputData, companyName);
+      converter.createVouchers(inputData, function(voucherList){
+        converter.writeOutputFile(voucherList, companyName);
+      });
     } else {
       console.log("ERROR! Company Name not specified");
     }
