@@ -312,7 +312,7 @@ class Converter {
         </ENVELOPE>        
         `;
 
-        fs.writeFile("invoices.xml", output1+output2+output3, function(){
+        fs.writeFile("C:/tally9 original/invoices.xml", output1+output2+output3, function(){
           console.log("Output File invoices.xml has been written");
         });
     }
