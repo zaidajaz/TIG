@@ -133,7 +133,15 @@ class Converter {
           guid = uuidv4();
           address = "Hazratbal , Srinagar.";
           invDate = custData[0].date;
-          invDate = invDate.replace(/-/g,"");
+          invDate = invDate.split("-");
+          let invDateDD = invDate[0];
+          let invDateMM = invDate[1];
+          let invDateYY = invDate[2];
+          invDate = new Date(invDateMM + "/" + invDateDD + "/" + invDateYY);
+          let invDateYYYY = invDate.getFullYear().toString();
+          let invDateMonth = (invDate.getMonth() + 1) < 10 ? "0" + (invDate.getMonth() + 1).toString() : (invDate.getMonth() + 1).toString();
+          let invDateDay = invDate.getDate() < 10 ? "0" + invDate.getDate() : invDate.getDate().toString();
+          invDate = invDateYYYY + invDateMonth + invDateDay;
           partyName = (custData[0].name.encodeHTML());
           alterID = parseInt(Math.random()*100000);
           className = getClassNameForInvoice(custData);
@@ -213,11 +221,13 @@ class Converter {
 
             var voucherDetails2 = "";
 
+            var totalGSTAmount = 0;
+
             custData.forEach(entry=>{
 
             gstRate = entry.gstPercent;
             gstAmount = parseFloat(entry.cgst) + parseFloat(entry.sgst);
-            stockItemName = entry.item;
+            stockItemName = entry.item.encodeHTML();
             stockItemRate = parseFloat(entry.amount).toFixed(2);
             quantity = entry.qty;
             amount = parseFloat(stockItemRate) + gstAmount;
@@ -233,37 +243,9 @@ class Converter {
               amount = parseFloat(stockItemRate) + gstAmount;
             }
 
+            totalGSTAmount += parseFloat((gstAmount/2).toFixed(2));
+
               voucherDetails2 += `
-              <LEDGERENTRIES.LIST>
-               <BASICRATEOFINVOICETAX.LIST>
-                 <BASICRATEOFINVOICETAX> ${gstRate/2}</BASICRATEOFINVOICETAX>
-               </BASICRATEOFINVOICETAX.LIST>
-               <ROUNDTYPE/>
-               <LEDGERNAME>SGST</LEDGERNAME>
-               <METHODTYPE>On Total Sales</METHODTYPE>
-               <CLASSRATE>${gstRate/2}</CLASSRATE>
-               <GSTCLASS/>
-               <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-               <LEDGERFROMITEM>No</LEDGERFROMITEM>
-               <REMOVEZEROENTRIES>Yes</REMOVEZEROENTRIES>
-               <ISPARTYLEDGER>No</ISPARTYLEDGER>
-               <AMOUNT>${(gstAmount/2).toFixed(2)}</AMOUNT>
-              </LEDGERENTRIES.LIST>
-              <LEDGERENTRIES.LIST>
-               <BASICRATEOFINVOICETAX.LIST>
-                 <BASICRATEOFINVOICETAX> ${gstRate/2}</BASICRATEOFINVOICETAX>
-               </BASICRATEOFINVOICETAX.LIST>
-               <ROUNDTYPE/>
-               <LEDGERNAME>CGST</LEDGERNAME>
-               <METHODTYPE>On Total Sales</METHODTYPE>
-               <CLASSRATE>${gstRate/2}</CLASSRATE>
-               <GSTCLASS/>
-               <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-               <LEDGERFROMITEM>No</LEDGERFROMITEM>
-               <REMOVEZEROENTRIES>Yes</REMOVEZEROENTRIES>
-               <ISPARTYLEDGER>No</ISPARTYLEDGER>
-               <AMOUNT>${(gstAmount/2).toFixed(2)}</AMOUNT>
-              </LEDGERENTRIES.LIST>
               <ALLINVENTORYENTRIES.LIST>
                <STOCKITEMNAME>${stockItemName}</STOCKITEMNAME>
                <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
@@ -296,6 +278,31 @@ class Converter {
                </BATCHALLOCATIONS.LIST>
               </ALLINVENTORYENTRIES.LIST>`;
             });
+            var gstXML = `
+            <LEDGERENTRIES.LIST>
+            <LEDGERNAME>SGST</LEDGERNAME>
+            <METHODTYPE>On Total Sales</METHODTYPE>
+            <GSTCLASS/>
+            <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+            <LEDGERFROMITEM>No</LEDGERFROMITEM>
+            <REMOVEZEROENTRIES>Yes</REMOVEZEROENTRIES>
+            <ISPARTYLEDGER>No</ISPARTYLEDGER>
+            <AMOUNT>${totalGSTAmount.toFixed(2)}</AMOUNT>
+           </LEDGERENTRIES.LIST>
+           <LEDGERENTRIES.LIST>
+            <ROUNDTYPE/>
+            <LEDGERNAME>CGST</LEDGERNAME>
+            <METHODTYPE>On Total Sales</METHODTYPE>
+            <GSTCLASS/>
+            <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+            <LEDGERFROMITEM>No</LEDGERFROMITEM>
+            <REMOVEZEROENTRIES>Yes</REMOVEZEROENTRIES>
+            <ISPARTYLEDGER>No</ISPARTYLEDGER>
+            <AMOUNT>${totalGSTAmount.toFixed(2)}</AMOUNT>
+           </LEDGERENTRIES.LIST>
+            `;
+          
+          voucherDetails2 = gstXML + voucherDetails2;
            voucherDetails2 += `
            </VOUCHER>
            `;
