@@ -224,6 +224,53 @@ class Generator{
         
         return array;
     }
+
+    groupByItemName(){
+        var self = this;
+        var mutliItemList = [];
+        self.output.forEach((element, index, array) => {
+            let elementID = element.date + element.name + element.item;
+            let count = array.filter(x => x.date + x.name + x.item == elementID).length;
+            if(count > 1) {
+                if(mutliItemList.findIndex(element => element.elementID == elementID) == -1){
+                    mutliItemList.push({elementID: elementID, count: count});
+                }
+            }
+        });
+
+        let invalidSerials = [];
+        mutliItemList.forEach((element) => {
+           let tempArray = self.output.filter(x => x.date + x.name + x.item == element.elementID);
+           tempArray[0].qty = element.count;
+
+        const gstFactor = (parseInt(tempArray[0].GST) + 100)/100;
+        const listPrice = parseFloat(tempArray[0].listPrice) * element.count;
+        let amount = (listPrice/gstFactor);
+        const cgst = parseFloat(amount * tempArray[0].GST/200).toFixed(2);
+        amount = amount.toFixed(2);
+
+           tempArray[0].amount = amount;
+           tempArray[0].cgst = tempArray[0].sgst = cgst;
+            let serial = tempArray[0].sno;
+
+            const indexInOutput  = self.output.findIndex(el => el.sno == serial);
+            self.output[indexInOutput] = tempArray[0];
+
+            tempArray.forEach((e, i) => {
+                if(i > 0){
+                    invalidSerials.push(e.sno);
+                }
+            });
+        });
+
+        self.output = self.output.filter(element => !invalidSerials.includes(element.sno));
+        
+        let newSerial = 1;
+        self.output.forEach(element => {
+            element.sno = newSerial;
+            newSerial++;
+        });
+    }
 }
 
 
@@ -231,6 +278,7 @@ gen = new Generator();
 gen.init(function(){
     gen.generate();
     gen.groupByDate();
+    gen.groupByItemName();
     gen.writeOutput(process.argv[2]?process.argv[2]:'invoicelist');
 });
 
