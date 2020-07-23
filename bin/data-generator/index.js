@@ -314,7 +314,7 @@ class Generator{
         let total = 0;
         this.output.forEach(outputObj => {
             if(outputObj.date == date) {
-                total += parseFloat(outputObj.listPrice);
+                total += parseFloat(outputObj.listPrice) * parseFloat(outputObj.qty);
             }
         });
         return total;
