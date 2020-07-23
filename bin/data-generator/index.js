@@ -286,7 +286,8 @@ class Generator{
             let calculatedAmount = self.getTotalForDate(date);
             let diffAmount = calculatedAmount - expectedAmount;
             console.log(expectedAmount, calculatedAmount, diffAmount);
-            if(diffAmount > 0 && diffAmount <= allowedDiff/100 * expectedAmount) {
+            // if(diffAmount > 0 && diffAmount <= allowedDiff/100 * expectedAmount) {
+            if(diffAmount > 0) {
                 const lowestAmountRowIndex = self.getLowestListPriceRowIndex(date);
                 const removedPrice = parseFloat(self.output[lowestAmountRowIndex].listPrice);
                 const removedQty = parseFloat(self.output[lowestAmountRowIndex].qty);
