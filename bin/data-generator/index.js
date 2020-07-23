@@ -89,6 +89,7 @@ class Generator{
                     "amount":"",
                     "cgst":"",
                     "sgst":"",
+                    "rateListPrice":"",
                     "listPrice":"",
                     "invoiceNumber":"",
                     "gstin":"",
@@ -193,6 +194,7 @@ class Generator{
               {id: 'cgst', title: 'cgst'},
               {id: 'sgst', title: 'sgst'},
               {id: 'listPrice', title: 'listPrice'},
+              {id: 'rateListPrice', title: 'rateListPrice'},
               {id: 'invoiceNumber', title: 'invoiceNumber'},
               {id: 'gstin', title: 'gstin'},
               {id: 'placeOfSupply', title: 'placeOfSupply'},
@@ -265,11 +267,92 @@ class Generator{
 
         self.output = self.output.filter(element => !invalidSerials.includes(element.sno));
         
+        self.reSerialize();
+    }
+
+    reSerialize() {
         let newSerial = 1;
-        self.output.forEach(element => {
+        this.output.forEach(element => {
             element.sno = newSerial;
             newSerial++;
         });
+    }
+
+    tryMatchTheTotals(allowedDiff) {
+        var self = this;
+        self.amountList.forEach(amountObj => {
+            const date = amountObj.date;
+            const expectedAmount = parseFloat(amountObj.amount);
+            let calculatedAmount = self.getTotalForDate(date);
+            let diffAmount = calculatedAmount - expectedAmount;
+            console.log(expectedAmount, calculatedAmount, diffAmount);
+            if(diffAmount > 0 && diffAmount <= allowedDiff/100 * expectedAmount) {
+                const lowestAmountRowIndex = self.getLowestListPriceRowIndex(date);
+                const removedPrice = self.output[lowestAmountRowIndex].listPrice;
+                self.output[lowestAmountRowIndex].date = '';
+                calculatedAmount = calculatedAmount - removedPrice;
+                diffAmount = expectedAmount - calculatedAmount;
+                const higestAmountRowIndex = self.getHighestPriceRowIndex(date);
+                self.output[higestAmountRowIndex].rateListPrice = self.output[higestAmountRowIndex].listPrice;
+                self.output[higestAmountRowIndex].listPrice = parseFloat(self.output[higestAmountRowIndex].listPrice) + diffAmount;
+                self.recalculateAmounts(self.output[higestAmountRowIndex].listPrice, higestAmountRowIndex);
+            }
+        });
+    }
+
+    recalculateAmounts(listPrice, index) {
+        const gstFactor = (parseInt(this.output[index].GST) + 100)/100;
+        let amount = (listPrice/gstFactor);
+        const cgst = parseFloat(amount * this.output[index].GST/200).toFixed(2);
+        amount = amount.toFixed(2);
+
+        this.output[index].amount = amount;
+        this.output[index].cgst = this.output[index].sgst = cgst;
+    }
+
+    getTotalForDate(date) {
+        let total = 0;
+        this.output.forEach(outputObj => {
+            if(outputObj.date == date) {
+                total += parseFloat(outputObj.listPrice);
+            }
+        });
+        return total;
+    }
+
+    getLowestListPriceRowIndex(date) {
+        let index = -1;
+        let lowestListPrice = Number.POSITIVE_INFINITY;
+        let self = this;
+        this.output.forEach((outputObj, i) => {
+            if(outputObj.date == date) {
+                if(parseFloat(outputObj.listPrice) < lowestListPrice) {
+                    lowestListPrice = outputObj.listPrice;
+                    index = i;
+                }
+            }
+        });
+        return index;
+    }
+
+    getHighestPriceRowIndex(date) {
+        let index = -1;
+        let higestListPrice = Number.NEGATIVE_INFINITY;
+        let self = this;
+        this.output.forEach((outputObj, i) => {
+            if(outputObj.date == date) {
+                if(parseFloat(outputObj.listPrice) > higestListPrice) {
+                    higestListPrice = outputObj.listPrice;
+                    index = i;
+                }
+            }
+        });
+        return index;
+    }
+
+    cleanTheOutput(){
+        this.output = this.output.filter(outputObj => outputObj.date!='');
+        this.reSerialize();
     }
 }
 
@@ -279,6 +362,8 @@ gen.init(function(){
     gen.generate();
     gen.groupByDate();
     gen.groupByItemName();
+    gen.tryMatchTheTotals(process.argv[3]?process.argv[3]:2);
+    gen.cleanTheOutput();
     gen.writeOutput(process.argv[2]?process.argv[2]:'invoicelist');
 });
 
