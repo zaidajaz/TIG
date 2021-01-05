@@ -250,7 +250,7 @@ class Converter {
                <STOCKITEMNAME>${stockItemName}</STOCKITEMNAME>
                <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
                <ISAUTONEGATE>No</ISAUTONEGATE>
-               <RATE>${stockItemRate}/pcs</RATE>
+               <RATE>${(parseFloat(stockItemRate) / parseFloat(quantity)).toFixed(2)}/pcs</RATE>
                <AMOUNT>${stockItemRate}</AMOUNT>
                <ACTUALQTY> ${quantity} pcs</ACTUALQTY>
                <BILLEDQTY> ${quantity} pcs</BILLEDQTY>
