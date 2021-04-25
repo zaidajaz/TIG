@@ -1,14 +1,10 @@
-csvGen.bat
-Hot To Use.txt
-invoiceXMLGen.bat
-input
-data-converter/node_modules
-data-generator/node_modules
+bin/data-converter/node_modules
+bin/data-generator/node_modules
 invoices.xml
 invoicelist.csv
 .DS_Store
-.gitignore
 bin/data-generator/.DS_Store
 bin/data-generator/invoiceGen/.DS_Store
 invoicelist.csv
 .vscode/launch.json
+node_modules

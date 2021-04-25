@@ -1,0 +1,27 @@
+{
+  "name": "tally-invoice-gen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "prompt-sync": "^4.2.0",
+    "csv-parser": "^2.3.2",
+    "csv-writer": "^1.6.0",
+    "uuid": "^7.0.3",
+    "number-to-words": "^1.2.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zaidajaz/TIG.git"
+  },
+  "author": "Zaid Moharkan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zaidajaz/TIG/issues"
+  },
+  "homepage": "https://github.com/zaidajaz/TIG#readme"
+}
