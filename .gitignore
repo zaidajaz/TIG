@@ -1,6 +1,5 @@
 bin/data-converter/node_modules
 bin/data-generator/node_modules
-invoices.xml
 invoicelist.csv
 .DS_Store
 bin/data-generator/.DS_Store

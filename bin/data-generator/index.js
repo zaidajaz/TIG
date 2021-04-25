@@ -169,6 +169,7 @@ class Generator {
         this.amountList.forEach((element) => {
             var amount = parseFloat(element.amount).toFixed(2);
             var date = element.date;
+            var name = element.name;
             var sum = 0;
             for (let i = 0; i <= this.output.length - 1; i++) {
                 let oel = this.output[i];
@@ -180,6 +181,7 @@ class Generator {
                     }
                     sum = sum + parseFloat(oel.listPrice);
                     oel.date = date;
+                    oel.name = name ? name : oel.name;
                 }
             }
         });
@@ -427,29 +429,30 @@ class Generator {
 
 
 gen = new Generator();
-gen.init(function () {
-    console.log("Enter a choice to continue: \n 1 = Generate StockList & RateList files \n 2 = Generate Invoice List File \n");
-    var option = prompt(">> ");
-    switch (option) {
-        case "1":
-            var profitPercentage = parseInt(prompt("Enter profit percentage (number only): "));
-            if (!isNaN(profitPercentage)) {
-                gen.createStockInputFiles(profitPercentage / 100);
-            } else {
-                console.log("Invalid Input. Exiting...");
-                setTimeout(() => { }, 3000);
-            }
-            break;
-        case "2":
+
+console.log("Enter a choice to continue: \n 1 = Generate StockList & RateList files \n 2 = Generate Invoice List File \n");
+var option = prompt(">> ");
+switch (option) {
+    case "1":
+        var profitPercentage = parseInt(prompt("Enter profit percentage (number only): "));
+        if (!isNaN(profitPercentage)) {
+            gen.createStockInputFiles(profitPercentage / 100);
+        } else {
+            console.log("Invalid Input. Exiting...");
+            setTimeout(() => { }, 3000);
+        }
+        break;
+    case "2":
+        gen.init(function () {
             gen.generate();
             gen.groupByDate();
             gen.groupByItemName();
             gen.tryMatchTheTotals();
             gen.cleanTheOutput();
             gen.writeOutput(process.argv[2] ? process.argv[2] : 'invoicelist');
-            break;
-        default:
-            console.log("Invalid Input. Exiting...");
-            setTimeout(() => { }, 3000);
-    }
-});
+        });
+        break;
+    default:
+        console.log("Invalid Input. Exiting...");
+        setTimeout(() => { }, 3000);
+};
