@@ -1,6 +1,7 @@
 const csv = require('csv-parser');
 const fs = require('fs');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const prompt = require('prompt-sync')();
 
 class Generator {
     init(callback) {
@@ -14,6 +15,54 @@ class Generator {
                 });
             });
         });
+    }
+
+    createStockInputFiles(profitPercentage) {
+
+        const addProfitToPrice = (price, profitPercent) => {
+            return Math.round(Math.ceil(price * profitPercent + price) / 10) * 10;
+        }
+
+        var rateListArr = [];
+        var stockListArr = [];
+
+        fs.createReadStream('C:/tally9 original/s.csv')
+            .pipe(csv(['Item', 'Qty', 'Price', 'Misc1', 'Misc2']))
+            .on('data', function (row) {
+                rateListArr.push(
+                    {
+                        item: row["Item"],
+                        price: addProfitToPrice(parseFloat(row["Price"]), profitPercentage),
+                        gst: 18
+                    }
+                );
+                stockListArr.push(
+                    {
+                        item: row["Item"],
+                        qty: row["Qty"]
+                    }
+                );
+            }).on('end', function () {
+                const stockListWriter = createCsvWriter({
+                    path: 'input/stockList.csv',
+                    header: [
+                        { id: 'item', title: 'Item' },
+                        { id: 'qty', title: 'Qty' }
+                    ]
+                });
+
+                const reateListWriter = createCsvWriter({
+                    path: 'input/RateList.csv',
+                    header: [
+                        { id: 'item', title: 'Item' },
+                        { id: 'price', title: 'Price' },
+                        { id: 'gst', title: 'GST' }
+                    ]
+                });
+
+                stockListWriter.writeRecords(stockListArr).then(() => { console.log("Stock List created") });
+                reateListWriter.writeRecords(rateListArr).then(() => { console.log("Rate List created") });
+            });
     }
 
     readNames(callback) {
@@ -379,11 +428,28 @@ class Generator {
 
 gen = new Generator();
 gen.init(function () {
-    gen.generate();
-    gen.groupByDate();
-    gen.groupByItemName();
-    gen.tryMatchTheTotals();
-    gen.cleanTheOutput();
-    gen.writeOutput(process.argv[2] ? process.argv[2] : 'invoicelist');
+    console.log("Enter a choice to continue: \n 1 = Generate StockList & RateList files \n 2 = Generate Invoice List File \n");
+    var option = prompt(">> ");
+    switch (option) {
+        case "1":
+            var profitPercentage = parseInt(prompt("Enter profit percentage (number only): "));
+            if (!isNaN(profitPercentage)) {
+                gen.createStockInputFiles(profitPercentage / 100);
+            } else {
+                console.log("Invalid Input. Exiting...");
+                setTimeout(() => { }, 3000);
+            }
+            break;
+        case "2":
+            gen.generate();
+            gen.groupByDate();
+            gen.groupByItemName();
+            gen.tryMatchTheTotals();
+            gen.cleanTheOutput();
+            gen.writeOutput(process.argv[2] ? process.argv[2] : 'invoicelist');
+            break;
+        default:
+            console.log("Invalid Input. Exiting...");
+            setTimeout(() => { }, 3000);
+    }
 });
-
