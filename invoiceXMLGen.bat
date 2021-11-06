@@ -1,1 +1,1 @@
-node bin/data-converter/index.js "Test Comp"
+node bin/data-converter/index.js "Test Comp" && node bin/input-regenerator/index.js
